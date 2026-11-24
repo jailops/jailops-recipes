@@ -1,0 +1,14 @@
+# Your own values and secrets, made next to a recipe when you use it (cp config.example NAME.vars; the secrets are files you
+# create and give with --set-file). They never belong in this repository.
+*.vars
+*.secret
+*.key
+*.pem
+*.env
+
+# Editors and the system
+*~
+*.swp
+*.orig
+*.rej
+.DS_Store

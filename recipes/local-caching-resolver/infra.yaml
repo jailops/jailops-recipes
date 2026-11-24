@@ -1,0 +1,33 @@
+# Infrastructure of local-caching-resolver, FOR A NEW JAIL ONLY: `jailops apply -f` of a Jail document replaces the
+# specification of a jail that exists. For a jail you already have, add only the firewall policy. Copy the file and
+# change the names and the client network (it must be the client_network of the recipe).
+#   jailops apply -f infra.yaml && jailops start dns
+apiVersion: jailops/v1
+kind: AddressSet
+metadata:
+  name: dns-clients
+spec:
+  comment: "who may ask the resolver"
+  addresses:
+    - {address: "10.20.0.0/24", comment: "the client network"}
+---
+apiVersion: jailops/v1
+kind: FirewallPolicy
+metadata:
+  name: dns
+spec:
+  default_in: deny
+  rules:
+    - {name: dns-udp, action: allow, direction: in, proto: udp, ports: ["53"], from: ["set:dns-clients"], comment: "DNS from the client network"}
+    - {name: dns-tcp, action: allow, direction: in, proto: tcp, ports: ["53"], from: ["set:dns-clients"], comment: "DNS over tcp from the client network"}
+---
+apiVersion: jailops/v1
+kind: Jail
+metadata:
+  name: dns
+spec:
+  image: freebsd-15-1
+  storage: default
+  network:
+    - {name: eth0, network: lan, ipv4: auto}
+  firewall: {policies: [dns]}

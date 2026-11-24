@@ -1,0 +1,31 @@
+# quiet-periodic-and-cron: periodic(8) reports only what is wrong and writes it to log files; cron starts jobs spread out.
+# Needs JailOps >= 0.9.5.   jailops jail apply NAME -f recipes/quiet-periodic-and-cron/ --vars my.vars
+# Works on any FreeBSD jail. periodic.conf is changed variable by variable (sysrc keeps the rest of the file).
+vars:
+  cron_jitter: {default: 30}     # seconds, 0 to 60: each job starts a random time after its minute
+steps:
+  # a jail has no mail: the reports go to files that the stock newsyslog.conf rotates
+  - sysrc:
+      daily_output: /var/log/daily.log
+      weekly_output: /var/log/weekly.log
+      monthly_output: /var/log/monthly.log
+      daily_show_success: "NO"
+      daily_show_info: "NO"
+      weekly_show_success: "NO"
+      weekly_show_info: "NO"
+      monthly_show_success: "NO"
+      monthly_show_info: "NO"
+      # checks of hardware and of the host's network mean nothing in a jail
+      daily_status_disks_enable: "NO"
+      daily_status_mfi_enable: "NO"
+      daily_status_network_enable: "NO"
+      daily_status_world_kernel: "NO"
+      weekly_locate_enable: "NO"
+      weekly_whatis_enable: "NO"
+      daily_clean_tmps_enable: "YES"
+    in: periodic.conf
+
+  # -j spreads the jobs of users, -J the jobs of root (the system crontab): many jails do not wake up in the same second.
+  # cron reads its flags when it starts: a changed value is used after `service cron restart`, which the recipe never does.
+  - sysrc: {cron_flags: "-j ${cron_jitter} -J ${cron_jitter}"}
+  - service: {name: cron, enabled: true, running: true}

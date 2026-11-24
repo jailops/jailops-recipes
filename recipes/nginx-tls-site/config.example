@@ -1,0 +1,8 @@
+# Variables of nginx-tls-site. tls_key is secret: it is never in this file, give it with --set-file.
+# tls_cert has several lines in real use: give it with --set-file.
+site=example.test
+server_aliases=www.example.test
+listen_address=0.0.0.0
+web_root=/usr/local/www/example.test
+ssl_dir=/usr/local/etc/ssl
+tls_cert=-----BEGIN CERTIFICATE----- placeholder -----END CERTIFICATE-----

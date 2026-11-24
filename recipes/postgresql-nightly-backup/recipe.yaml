@@ -1,0 +1,31 @@
+# postgresql-nightly-backup: a nightly logical dump of every database of a PostgreSQL server, with retention.
+# Needs JailOps >= 0.9.5 and a PostgreSQL server in the jail that the postgres user reaches on the local socket
+# (one from small-postgresql-server, or one made by hand). It installs no package and starts no service.
+#   jailops jail apply db -f recipes/postgresql-nightly-backup/ --vars my.vars
+# A failed night is a syslog line (daemon.err, tag pg-backup) and a missing update of DUMP_DIR/last-success.
+vars:
+  pg_user:     {default: postgres}
+  dump_dir:    {default: /var/db/pgdumps}    # attach a volume here to keep the dumps apart from the data
+  keep_days:   {default: 14}
+  backup_hour: {default: 2}
+  backup_minute: {default: 17}
+steps:
+  # the server must answer for the postgres user: stop here with the reason otherwise (a check, no guard)
+  - run: [su, "${pg_user}", -c, "/usr/local/bin/psql -XAtc 'select 1'"]
+
+  # the directory of the dumps: the database user writes there, nobody else reads (/var/backups is root's)
+  - dir: {path: "${dump_dir}", mode: "0750", owner: "${pg_user}", group: "${pg_user}"}
+
+  - file:
+      path: /usr/local/etc/pg-backup.conf
+      source: files/pg-backup.conf
+      template: true
+  - file:
+      path: /usr/local/sbin/pg-backup.sh
+      source: files/pg-backup.sh
+      mode: "0755"
+  - file:
+      path: /usr/local/etc/cron.d/pg-backup
+      source: files/pg-backup.cron
+      template: true
+      mode: "0644"

@@ -1,0 +1,39 @@
+# nginx-tls-site: one https site with its certificate and key; plain http redirects to it.
+# Needs JailOps >= 0.9.5 and a jail set up by nginx-web-server (or any nginx that includes conf.d/*.conf).
+#   jailops jail apply web -f recipes/nginx-tls-site/ --vars my.vars --set-file tls_cert=site.crt --set-file tls_key=site.key
+# One site file per site: apply again with another `site` for the next one. It never touches nginx.conf.
+vars:
+  site:           {required: true}                     # the main name; it names the files of the site
+  server_aliases: {default: ""}                        # more names, separated by spaces
+  listen_address: {default: 0.0.0.0}                   # [::] for IPv6
+  web_root:       {default: "/usr/local/www/${site}"}
+  ssl_dir:        {default: /usr/local/etc/ssl}
+  tls_cert:       {required: true}                     # the certificate chain (PEM), given with --set-file
+  tls_key:        {secret: true}                       # the private key (PEM), given with --set-file
+steps:
+  - file:
+      path: ${ssl_dir}/${site}.crt
+      template: true
+      content: "${tls_cert}\n"
+      mode: "0644"
+  - file:
+      path: ${ssl_dir}/${site}.key
+      template: true
+      content: "${tls_key}\n"
+      mode: "0600"
+
+  - dir: {path: "${web_root}", mode: "0755"}
+  # a page to show that the site answers, only while the web root has no index.html: your content is never replaced
+  - run: [sh, -c, 'printf "<!doctype html><title>%s</title><p>%s is served by nginx.\n" "$1" "$1" > "$2/index.html"', sh, "${site}", "${web_root}"]
+    creates: ${web_root}/index.html
+
+  - file:
+      path: /usr/local/etc/nginx/conf.d/${site}.conf
+      source: files/site.conf
+      template: true
+
+  # a broken file stops the recipe before nginx reloads (the running nginx is not touched; the file stays on disk)
+  - run: [nginx, -t]
+
+  # a reload keeps connections. No guard: it runs at every apply ("executed")
+  - run: [service, nginx, reload]

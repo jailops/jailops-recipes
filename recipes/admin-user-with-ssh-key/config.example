@@ -1,0 +1,7 @@
+# Variables of admin-user-with-ssh-key. ssh_keys has several lines in real use: give it with --set-file.
+user=alice
+ssh_keys=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPlaceholderPlaceholderPlaceholderPlaceho alice@example.test
+shell=/bin/sh
+groups=wheel
+comment=Administrator
+authorized_keys_dir=/usr/local/etc/ssh/authorized_keys

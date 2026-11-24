@@ -1,0 +1,5 @@
+# Variables of postgresql-restore-dump.
+dump=/var/db/pgdumps/appdb-20261124-021700.dump
+database=appdb_restored
+owner=postgres
+pg_user=postgres

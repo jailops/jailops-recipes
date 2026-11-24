@@ -1,0 +1,2 @@
+# Logical backup of PostgreSQL, written by the recipe postgresql-nightly-backup. The user comes before the command in cron.d.
+${backup_minute} ${backup_hour} * * * ${pg_user} /usr/local/sbin/pg-backup.sh

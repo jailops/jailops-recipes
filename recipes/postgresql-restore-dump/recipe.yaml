@@ -1,0 +1,18 @@
+# postgresql-restore-dump: restore one dump into a NEW database. It is an operation you run when you need it, not a state:
+# do not list it in a fleet. It never writes into a database that exists.
+# Needs JailOps >= 0.9.5 and a PostgreSQL server in the jail (dumps from postgresql-nightly-backup).
+#   jailops jail apply db -f recipes/postgresql-restore-dump/ --vars my.vars
+vars:
+  dump:     {required: true}                    # the dump file in the jail, for example /var/db/pgdumps/appdb-20261124-021700.dump
+  database: {required: true}                    # the new database; the recipe stops when it exists
+  owner:    {default: postgres}                 # the role that owns the new database and its objects; it must exist
+  pg_user:  {default: postgres}
+steps:
+  - file:
+      path: /usr/local/sbin/pg-restore-dump.sh
+      source: files/pg-restore-dump.sh
+      mode: "0755"
+
+  # skipped when the database exists: restoring again never overwrites it. The values are arguments of the script
+  - run: [su, "${pg_user}", -c, 'exec /usr/local/sbin/pg-restore-dump.sh "$@"', sh, "${dump}", "${database}", "${owner}"]
+    unless: [su, "${pg_user}", -c, 'exec /usr/local/sbin/pg-restore-dump.sh --exists "$1"', sh, "${database}"]

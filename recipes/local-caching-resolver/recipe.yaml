@@ -1,0 +1,36 @@
+# local-caching-resolver: a caching DNS resolver for one client network. It resolves by itself, from the root servers down
+# (full recursion): it sends no query to a resolver that you did not choose. Forwarding to an upstream is a choice you make
+# in a file of your own in conf.d (see the README).
+# Needs JailOps >= 0.9.5. First the infrastructure (infra.yaml: a jail and a firewall policy, for a new jail only), then:
+#   jailops jail apply dns -f recipes/local-caching-resolver/ --vars my.vars
+# It owns /usr/local/etc/unbound/unbound.conf as a whole (the one that was there is kept once as unbound.conf.before-jailops)
+# and adds an include directory, conf.d, for zones (local-dns-zone) and for anything of your own.
+vars:
+  client_network: {required: true}      # who may ask, besides the jail itself: an address with a prefix, 10.20.0.0/24
+  listen_address: {default: 0.0.0.0}
+steps:
+  - package: [unbound]
+
+  - run: [sh, -c, 'test ! -f "$1" || cp -p "$1" "$1.before-jailops"', sh, /usr/local/etc/unbound/unbound.conf]
+    creates: /usr/local/etc/unbound/unbound.conf.before-jailops
+
+  - dir: {path: /usr/local/etc/unbound/conf.d, mode: "0755"}
+
+  - file:
+      path: /usr/local/etc/unbound/unbound.conf
+      source: files/unbound.conf
+      template: true
+
+  # the root key for DNSSEC validation, made once; unbound keeps it up to date (the user unbound owns it).
+  # unbound-anchor exits 1 when it wrote a new file, so the check is that the file is there
+  - run: [sh, -c, 'unbound-anchor -a "$1"; test -s "$1" && chown unbound "$1"', sh, /usr/local/etc/unbound/root.key]
+    creates: /usr/local/etc/unbound/root.key
+
+  # a broken configuration stops the recipe before the resolver is started or reloaded
+  - run: [unbound-checkconf, /usr/local/etc/unbound/unbound.conf]
+
+  - service: {name: unbound, enabled: true, running: true}
+
+  # reload re-reads the configuration and the zones; the cache is rebuilt, the process stays.
+  # No guard: it runs at every apply ("executed")
+  - run: [service, unbound, reload]

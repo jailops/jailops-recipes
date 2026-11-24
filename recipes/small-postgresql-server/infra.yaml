@@ -1,0 +1,37 @@
+# Infrastructure of small-postgresql-server, FOR A NEW JAIL ONLY: `jailops apply -f` of a Jail document replaces the
+# specification of a jail that exists. For a jail you already have, add only what is missing (`jailops volume create`,
+# `jailops volume attach`, a firewall policy). Copy the file and change the names and the client address.
+#   jailops apply -f infra.yaml && jailops start db
+apiVersion: jailops/v1
+kind: Volume
+metadata:
+  name: pgdata
+spec:
+  storage: default
+  uid: 770                  # the postgres user of the FreeBSD package
+  gid: 770
+  mode: "0700"
+  comment: the PostgreSQL cluster
+---
+apiVersion: jailops/v1
+kind: FirewallPolicy
+metadata:
+  name: db-clients
+spec:
+  default_in: deny
+  rules:
+    - {name: postgres, action: allow, direction: in, proto: tcp, ports: ["5432"], from: ["10.20.0.10"], comment: "the application reaches PostgreSQL"}
+---
+apiVersion: jailops/v1
+kind: Jail
+metadata:
+  name: db
+spec:
+  image: freebsd-15-1
+  storage: default
+  network:
+    - {name: eth0, network: lan, ipv4: auto}
+  sysvipc: true             # PostgreSQL needs System V shared memory
+  volumes:
+    - {volume: pgdata, mount: /var/db/postgres}
+  firewall: {policies: [db-clients]}

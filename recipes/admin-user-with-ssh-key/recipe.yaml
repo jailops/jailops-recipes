@@ -1,0 +1,37 @@
+# admin-user-with-ssh-key: a user that logs in with a public key and has no password.
+# Needs JailOps >= 0.9.5 and a jail with FreeBSD-ssh:  jailops jail base add NAME FreeBSD-ssh
+#   jailops jail apply NAME -f recipes/admin-user-with-ssh-key/ --vars my.vars --set-file ssh_keys=admin.pub
+# One file per user (the key file below), so the recipe is applied again for every user.
+vars:
+  user:                {required: true}
+  ssh_keys:            {required: true}                 # one public key per line; give it with --set-file
+  shell:               {default: /bin/sh}
+  groups:              {default: wheel}                 # a comma list; the user's own group is always made
+  comment:             {default: Administrator}
+  authorized_keys_dir: {default: /usr/local/etc/ssh/authorized_keys}
+steps:
+  # the user, once; an existing user is not touched. No password is set: the account cannot log in with one.
+  - run: [pw, useradd, "${user}", -m, -s, "${shell}", -G, "${groups}", -c, "${comment}"]
+    unless: [pw, usershow, "${user}"]
+
+  # refuse a value that is not a list of public keys BEFORE the key file is replaced: a typo must not lock the user out.
+  # The keys are public, so they may be an argument. Nothing is written when one line is not a key.
+  - run:
+      - sh
+      - -c
+      - |
+        good=0 all=0
+        t=$(mktemp) && printf '%s\n' "$1" > "$t" && good=$(ssh-keygen -l -f "$t" | wc -l) && all=$(grep -vc '^[[:space:]]*\(#\|$\)' "$t"); rm -f "$t"
+        [ "$good" -gt 0 ] && [ "$good" -eq "$all" ] || { echo "ssh_keys: $good of $all lines are public keys: the key file was not written" >&2; exit 1; }
+      - sh
+      - "${ssh_keys}"
+
+  # the whole key file of this user is replaced: list every key the user needs. It is owned by root, so the user cannot
+  # change it, and it lives outside the home directory, so a restore of the home does not bring old keys back.
+  - file:
+      path: ${authorized_keys_dir}/${user}
+      template: true
+      content: "${ssh_keys}\n"
+      mode: "0644"
+      owner: root
+      group: wheel

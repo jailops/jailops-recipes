@@ -1,0 +1,4 @@
+# Variables of local-dns-zone. records has one local-data line per record in real use: give it with --set-file.
+zone=example.test
+records=local-data: "www.example.test. 300 IN A 192.0.2.10"
+zone_type=static

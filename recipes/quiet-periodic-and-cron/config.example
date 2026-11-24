@@ -1,0 +1,2 @@
+# Variables of quiet-periodic-and-cron.
+cron_jitter=30

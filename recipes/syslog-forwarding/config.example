@@ -1,0 +1,6 @@
+# Variables of syslog-forwarding.
+loghost=192.0.2.50
+port=514
+facility=*
+level=notice
+syslogd_flags=-s

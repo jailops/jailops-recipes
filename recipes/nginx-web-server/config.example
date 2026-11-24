@@ -1,0 +1,5 @@
+# Variables of nginx-web-server.
+package=nginx
+worker_processes=auto
+worker_connections=1024
+max_body_size=1m

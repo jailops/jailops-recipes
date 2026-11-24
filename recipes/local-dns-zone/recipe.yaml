@@ -1,0 +1,19 @@
+# local-dns-zone: names that the resolver answers itself, for one zone.
+# Needs JailOps >= 0.9.5 and a resolver from local-caching-resolver (any unbound that includes conf.d/*.conf).
+#   jailops jail apply dns -f recipes/local-dns-zone/ --vars my.vars --set-file records=records.txt
+# One file per zone in conf.d: apply again with another zone for the next one. It never touches unbound.conf.
+vars:
+  zone:      {required: true}                   # the zone, without the final dot: example.test
+  records:   {required: true}                   # the local-data lines of the zone, given with --set-file
+  zone_type: {default: static}                  # static: names not listed in the zone are NXDOMAIN; transparent: they are resolved as usual
+steps:
+  - file:
+      path: /usr/local/etc/unbound/conf.d/zone-${zone}.conf
+      source: files/zone.conf
+      template: true
+
+  # a broken file stops the recipe before unbound reloads (the running unbound is not touched; the file stays on disk)
+  - run: [unbound-checkconf, /usr/local/etc/unbound/unbound.conf]
+
+  # reload re-reads the zones, the cache is rebuilt. No guard: executed at every apply
+  - run: [service, unbound, reload]

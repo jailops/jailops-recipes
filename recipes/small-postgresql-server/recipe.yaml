@@ -1,0 +1,62 @@
+# small-postgresql-server: a PostgreSQL server whose data lives in a volume at /var/db/postgres. Nothing else: databases and
+# roles come from postgresql-database-and-role, backups from postgresql-nightly-backup.
+# Needs JailOps >= 0.9.5. First the infrastructure (infra.yaml: a volume and a jail, for a new jail only), then:
+#   jailops jail apply db -f recipes/small-postgresql-server/ --vars my.vars
+# It never replaces a file the server owns: postgresql.conf and pg_hba.conf each get one `include_dir` line, once, and the
+# recipe writes only its own files in conf.d. A server that is already running here keeps its rules and its settings.
+vars:
+  pg_version:       {default: "17"}       # the major version; 16 or later (pg_hba.d needs it). Never a minor version
+  listen_addresses: {default: "*"}        # who can reach the port is the firewall policy's decision
+  max_connections:  {default: 100}
+  shared_buffers:   {default: 128MB}
+steps:
+  # a server of another major version must not be replaced by pkg: refuse, with the reason
+  - run:
+      - sh
+      - -c
+      - |
+        [ "$1" -ge 16 ] || { echo "pg_version $1: pg_hba.d needs PostgreSQL 16 or later" >&2; exit 1; }
+        for d in /var/db/postgres/data*; do
+          [ -e "$d" ] || continue
+          [ "$d" = "/var/db/postgres/data$1" ] || { echo "$d is a cluster of another major version: upgrade it with dump and restore, this recipe will not install over it" >&2; exit 1; }
+        done
+      - sh
+      - "${pg_version}"
+
+  - package: ["postgresql${pg_version}-server"]
+  - sysrc:
+      postgresql_enable: "YES"
+      # a new cluster asks for a password on every network connection and trusts only the postgres user of the jail
+      postgresql_initdb_flags: "--encoding=utf-8 --lc-collate=C --auth-local=peer --auth-host=scram-sha-256"
+
+  # the volume root must belong to postgres before initdb; skipped once it does (a volume made without --uid 770)
+  - run: [chown, "postgres:postgres", /var/db/postgres]
+    unless: [sh, -c, '[ "$(stat -f %Su /var/db/postgres)" = postgres ]']
+
+  # initdb once: only while the volume has no cluster
+  - run: [service, postgresql, initdb]
+    creates: /var/db/postgres/data${pg_version}/PG_VERSION
+
+  # settings of this recipe, in a file of its own that postgresql.conf includes
+  - dir: {path: "/var/db/postgres/data${pg_version}/conf.d", mode: "0700", owner: postgres, group: postgres}
+  - file:
+      path: /var/db/postgres/data${pg_version}/conf.d/10-recipe.conf
+      source: files/10-recipe.conf
+      template: true
+      owner: postgres
+      group: postgres
+      mode: "0640"
+  - run: [sh, -c, 'printf "\n%s\n" "$2" >> "$1"', sh, "/var/db/postgres/data${pg_version}/postgresql.conf", "include_dir = 'conf.d'"]
+    unless: [grep, -q, "^include_dir = 'conf.d'", "/var/db/postgres/data${pg_version}/postgresql.conf"]
+
+  # who may connect: one file per database in pg_hba.d (postgresql-database-and-role). The line is added at the end of
+  # pg_hba.conf, after the rules that are there; the first rule that matches wins
+  - dir: {path: "/var/db/postgres/data${pg_version}/pg_hba.d", mode: "0700", owner: postgres, group: postgres}
+  - run: [sh, -c, 'printf "\n%s\n" "$2" >> "$1"', sh, "/var/db/postgres/data${pg_version}/pg_hba.conf", "include_dir pg_hba.d"]
+    unless: [grep, -q, "^include_dir pg_hba.d", "/var/db/postgres/data${pg_version}/pg_hba.conf"]
+
+  - service: {name: postgresql, enabled: true, running: true}
+
+  # reload re-reads the settings and the rules and keeps every connection. A setting that needs a restart (listen_addresses,
+  # max_connections, shared_buffers) is used after the next start, which the recipe never does. No guard: executed each time
+  - run: [service, postgresql, reload]

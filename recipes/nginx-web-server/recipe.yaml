@@ -1,0 +1,30 @@
+# nginx-web-server: nginx installed, with a main configuration that includes conf.d/*.conf; sites come from other recipes.
+# Needs JailOps >= 0.9.5.   jailops jail apply web -f recipes/nginx-web-server/ --vars my.vars
+# It owns /usr/local/etc/nginx/nginx.conf as a whole (the file that was there is kept once as nginx.conf.before-jailops).
+# A site is added with nginx-tls-site, or by dropping a file in conf.d.
+vars:
+  package:            {default: nginx, split: true}
+  worker_processes:   {default: auto}
+  worker_connections: {default: 1024}
+  max_body_size:      {default: 1m}
+steps:
+  - package: ["${package}"]
+
+  # keep the configuration that came with the package (or the one that was in the jail), once
+  - run: [sh, -c, 'test ! -f "$1" || cp -p "$1" "$1.before-jailops"', sh, /usr/local/etc/nginx/nginx.conf]
+    creates: /usr/local/etc/nginx/nginx.conf.before-jailops
+
+  - dir: {path: /usr/local/etc/nginx/conf.d, mode: "0755"}
+
+  - file:
+      path: /usr/local/etc/nginx/nginx.conf
+      source: files/nginx.conf
+      template: true
+
+  # a broken configuration stops the recipe before nginx is started or reloaded
+  - run: [nginx, -t]
+
+  - service: {name: nginx, enabled: true, running: true}
+
+  # a service step never restarts; a changed file needs a reload, which keeps connections. No guard: executed at every apply
+  - run: [service, nginx, reload]

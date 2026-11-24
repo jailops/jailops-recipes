@@ -1,0 +1,6 @@
+# Variables of postgresql-nightly-backup.
+pg_user=postgres
+dump_dir=/var/db/pgdumps
+keep_days=14
+backup_hour=2
+backup_minute=17

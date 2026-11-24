@@ -1,0 +1,62 @@
+# postgresql-database-and-role: one database with one role that owns it and may connect from one network.
+# Needs JailOps >= 0.9.5 and a server set up by small-postgresql-server (PostgreSQL 16 or later with pg_hba.d).
+#   jailops jail apply db -f recipes/postgresql-database-and-role/ --vars my.vars --set-file db_password=app.password
+# One set of files per database, named after it: apply again with another database, role and password for the next one.
+# The password is a secret variable: it is only in the file below, never in an argument, a log or the SQL text.
+vars:
+  database:       {required: true}      # a plain name: letters, digits and _
+  role:           {required: true}      # a plain name: letters, digits and _
+  client_network: {required: true}      # who may connect: an address with a prefix, for example 10.20.0.0/24
+  pg_version:     {default: "17"}
+  db_password:    {secret: true}        # given with --set-file
+steps:
+  # names are put into SQL as identifiers by psql; refuse anything that is not a plain name before anything is written
+  - run:
+      - sh
+      - -c
+      - |
+        for v; do
+          case $v in ''|*[!A-Za-z0-9_]*) echo "database and role must be plain names: letters, digits and _" >&2; exit 1 ;; esac
+        done
+      - sh
+      - "${database}"
+      - "${role}"
+
+  # the server must read pg_hba.d (small-postgresql-server adds the line): otherwise the rule below would never be read
+  - run: [sh, -c, 'grep -q "^include_dir pg_hba.d" "$1" || { echo "pg_hba.conf has no include_dir pg_hba.d: set the server up with small-postgresql-server, or add that line yourself (PostgreSQL 16 or later)" >&2; exit 1; }', sh, "/var/db/postgres/data${pg_version}/pg_hba.conf"]
+
+  - dir: {path: /usr/local/etc/pgsetup, mode: "0750", owner: root, group: postgres}
+
+  # the password file: the whole content is the secret. It stays in the jail (so in its snapshots), readable by postgres only
+  - file:
+      path: /usr/local/etc/pgsetup/${database}.password
+      template: true
+      content: "${db_password}"
+      owner: postgres
+      group: postgres
+      mode: "0600"
+  - file:
+      path: /usr/local/etc/pgsetup/${database}.sql
+      source: files/role.sql
+      template: true
+      owner: postgres
+      group: postgres
+      mode: "0640"
+
+  # who may connect to this database: one line, in a file of its own
+  - file:
+      path: /var/db/postgres/data${pg_version}/pg_hba.d/${database}.conf
+      template: true
+      content: |
+        # database ${database}, written by the recipe postgresql-database-and-role
+        host  ${database}  ${role}  ${client_network}  scram-sha-256
+      owner: postgres
+      group: postgres
+      mode: "0600"
+
+  # role, password and database, as postgres. The SQL file is idempotent (creates what is missing, sets the password again)
+  # and keeps its session out of the server log. No guard: it runs at every apply, which is how the password is rotated
+  - run: [su, postgres, -c, 'exec /usr/local/bin/psql -X -q -f "$1"', sh, "/usr/local/etc/pgsetup/${database}.sql"]
+
+  # the new rule is read by a reload. No guard: executed at every apply
+  - run: [service, postgresql, reload]

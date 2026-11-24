@@ -1,0 +1,5 @@
+# Variables of ssh-key-only-access.
+allowed_users=alice bob
+permit_root_login=no
+port=22
+keys_dir=/usr/local/etc/ssh/authorized_keys

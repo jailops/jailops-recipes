@@ -1,0 +1,5 @@
+# Variables of postgresql-database-and-role. db_password is secret: it is never in this file, give it with --set-file.
+database=appdb
+role=app
+client_network=10.20.0.0/24
+pg_version=17

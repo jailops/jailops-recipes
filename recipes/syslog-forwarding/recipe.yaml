@@ -1,0 +1,40 @@
+# syslog-forwarding: the jail sends its log messages to a central log host.
+# Needs JailOps >= 0.9.5.   jailops jail apply NAME -f recipes/syslog-forwarding/ --vars my.vars
+# One file of its own in /usr/local/etc/syslog.d, which syslogd reads after /etc/syslog.conf, and one rc variable. A jail of
+# JailOps starts syslogd with -ss, which opens no network socket and so forwards nothing: -s still refuses remote messages
+# and can send. Flags are read when syslogd starts, so the recipe restarts it once, only while it runs with other flags.
+vars:
+  loghost:      {required: true}                  # an address or a name the jail can resolve
+  port:         {default: 514}
+  facility:     {default: "*"}                    # which facility is sent: * or kern, user, mail, daemon, auth, local0 ...
+  level:        {default: notice}                 # from this level up: emerg, alert, crit, err, warning, notice, info, debug
+  syslogd_flags: {default: "-s"}
+steps:
+  # refuse names that syslogd does not know before anything is written: syslogd skips such a line without an error
+  - run:
+      - sh
+      - -c
+      - |
+        case "$1" in '*'|kern|user|mail|daemon|auth|security|syslog|lpr|news|uucp|cron|authpriv|ftp|ntp|audit|console|local[0-7]) ;; *) echo "facility: * or a facility name of syslog.conf(5)" >&2; exit 1 ;; esac
+        case "$2" in emerg|alert|crit|err|warning|notice|info|debug) ;; *) echo "level: emerg, alert, crit, err, warning, notice, info or debug" >&2; exit 1 ;; esac
+      - sh
+      - "${facility}"
+      - "${level}"
+
+  - file:
+      path: /usr/local/etc/syslog.d/forward.conf
+      template: true
+      content: |
+        # written by the recipe syslog-forwarding: messages of this facility and level (and above) are sent over UDP to the log host
+        ${facility}.${level}	@${loghost}:${port}
+
+  - sysrc: {syslogd_flags: "${syslogd_flags}"}
+  - service: {name: syslogd, enabled: true, running: true}
+
+  # syslogd with other flags than the ones above: restart it once (it is stopped for a moment and picks up the flags).
+  # skipped as soon as the running process has them
+  - run: [service, syslogd, restart]
+    unless: [sh, -c, 'ps -ax -o args= | grep -qx "/usr/sbin/syslogd $1"', sh, "${syslogd_flags}"]
+
+  # syslogd re-reads its configuration on reload and drops nothing. No guard: it runs at every apply ("executed")
+  - run: [service, syslogd, reload]

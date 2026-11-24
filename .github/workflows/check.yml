@@ -1,0 +1,50 @@
+name: Check
+
+# Every push and pull request: sh check.sh validates every recipe offline (no FreeBSD host, no daemon, no jail).
+# The check needs the jailops client of a release that has `jailops jail apply --validate` (0.9.5 or later): it is built here from the
+# tagged source of github.com/jailops/jailops. Change JAILOPS_REF when a newer release changes what the Book needs.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# Nothing by default: the job names what it needs.
+permissions: {}
+
+env:
+  JAILOPS_REF: v0.9.5
+  GOTOOLCHAIN: auto
+
+jobs:
+  check:
+    name: check.sh
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      # every action is pinned to a commit SHA, with the version in a comment
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: The jailops source (the tagged release)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          repository: jailops/jailops
+          ref: ${{ env.JAILOPS_REF }}
+          path: jailops-src
+          persist-credentials: false
+
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5   # v7.1.0
+        with:
+          go-version-file: jailops-src/go.mod
+          cache: false
+
+      - name: Build the jailops client
+        run: cd jailops-src && CGO_ENABLED=0 go build -o "$RUNNER_TEMP/jailops" ./cmd/jailops
+
+      - name: check.sh
+        env:
+          JAILOPS: ${{ runner.temp }}/jailops
+        run: sh check.sh

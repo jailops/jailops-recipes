@@ -1,0 +1,5 @@
+# Variables of small-postgresql-server.
+pg_version=17
+listen_addresses=*
+max_connections=100
+shared_buffers=128MB
