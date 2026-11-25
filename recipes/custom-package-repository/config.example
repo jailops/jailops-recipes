@@ -1,0 +1,5 @@
+# Variables of custom-package-repository. The URL of pkg may hold ${ABI}: write it as it is.
+repo_name=acme
+repo_url=pkg+https://pkg.example.org/${ABI}/latest
+key_url=https://pkg.example.org/acme.pub
+key_sha256=

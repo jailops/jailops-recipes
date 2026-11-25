@@ -1,0 +1,85 @@
+######## pull request of master
+no pull requests found for branch "master"
+no pull requests found for branch "master"
+
+######## run 45583227851
+
+X master Check · 45583227851
+Triggered via push about 4 minutes ago
+
+JOBS
+X check.sh in 43s (ID 139098212811)
+  ✓ Set up job
+  ✓ Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+  ✓ The jailops source (the tagged release)
+  ✓ Run actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
+  ✓ Build the jailops client
+  X check.sh
+  - Post Run actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
+  ✓ Post The jailops source (the tagged release)
+  ✓ Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+  ✓ Complete job
+
+ANNOTATIONS
+X Process completed with exit code 1.
+check.sh: .github#27
+
+
+To see what failed, try: gh run view 45583227851 --log-failed
+View this run on GitHub: https://github.com/jailops/jailops-recipes/actions/runs/45583227851
+check.sh	check.sh	﻿2026-11-25T09:14:36.3049467Z ##[group]Run sh check.sh
+check.sh	check.sh	2026-11-25T09:14:36.3049779Z ^[[36;1msh check.sh^[[0m
+check.sh	check.sh	2026-11-25T09:14:36.3070024Z shell: /usr/bin/bash -e {0}
+check.sh	check.sh	2026-11-25T09:14:36.3070288Z env:
+check.sh	check.sh	2026-11-25T09:14:36.3070491Z   JAILOPS_REF: v0.9.5
+check.sh	check.sh	2026-11-25T09:14:36.3070731Z   GOTOOLCHAIN: local
+check.sh	check.sh	2026-11-25T09:14:36.3071283Z   JAILOPS: /home/runner/work/_temp/jailops
+check.sh	check.sh	2026-11-25T09:14:36.3071565Z ##[endgroup]
+check.sh	check.sh	2026-11-25T09:14:36.3827475Z ok   admin-user-with-ssh-key
+check.sh	check.sh	2026-11-25T09:14:36.4354747Z ok   local-caching-resolver
+check.sh	check.sh	2026-11-25T09:14:36.4889912Z ok   local-dns-zone
+check.sh	check.sh	2026-11-25T09:14:36.5598245Z ok   nginx-tls-site
+check.sh	check.sh	2026-11-25T09:14:36.6166037Z ok   nginx-web-server
+check.sh	check.sh	2026-11-25T09:14:36.6775813Z ok   postgresql-database-and-role
+check.sh	check.sh	2026-11-25T09:14:36.7395682Z ok   postgresql-nightly-backup
+check.sh	check.sh	2026-11-25T09:14:36.7969280Z ok   postgresql-restore-dump
+check.sh	check.sh	2026-11-25T09:14:36.8436391Z ok   quiet-periodic-and-cron
+check.sh	check.sh	2026-11-25T09:14:36.8987325Z FAIL small-postgresql-server: jailops jail apply --validate failed
+check.sh	check.sh	2026-11-25T09:14:36.8999664Z      usage: unknown field "requirements"
+check.sh	check.sh	2026-11-25T09:14:36.9000402Z      hint: run 'jailops jail apply --help' for usage
+check.sh	check.sh	2026-11-25T09:14:36.9577939Z FAIL ssh-key-only-access: jailops jail apply --validate failed
+check.sh	check.sh	2026-11-25T09:14:36.9590160Z      usage: unknown field "requirements"
+check.sh	check.sh	2026-11-25T09:14:36.9590589Z      hint: run 'jailops jail apply --help' for usage
+check.sh	check.sh	2026-11-25T09:14:37.0277079Z ok   syslog-forwarding
+check.sh	check.sh	2026-11-25T09:14:37.0314158Z ok   workflows
+check.sh	check.sh	2026-11-25T09:14:37.1560424Z ok   index.json
+check.sh	check.sh	2026-11-25T09:14:37.1585549Z ##[error]Process completed with exit code 1.
+
+######## run 45575892776
+
+✓ master Check · 45575892776
+Triggered via push about 52 minutes ago
+
+JOBS
+✓ check.sh in 36s (ID 139073617050)
+
+For more information about the job, try: gh run view --job=139073617050
+View this run on GitHub: https://github.com/jailops/jailops-recipes/actions/runs/45575892776
+(passed; seconds per step, to see what is slow:)
+  17 s  Build the jailops client
+  7 s  Run actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
+  3 s  Set up job
+  3 s  Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+  2 s  The jailops source (the tagged release)
+  1 s  Post Run actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
+job check.sh: 36 s
+  0 s  check.sh
+  0 s  Post The jailops source (the tagged release)
+  0 s  Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+  0 s  Complete job
+
+######## checks and statuses of c613bd4e0510339d9ca244afcc50f59a325cbb18 that did not succeed
+--- check.sh: failure https://github.com/jailops/jailops-recipes/actions/runs/45583227851/job/139098212811
+
+
+

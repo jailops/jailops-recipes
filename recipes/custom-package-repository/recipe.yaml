@@ -1,0 +1,70 @@
+# custom-package-repository: the jail uses one more pkg repository, with its public key fetched from a URL.
+# Needs JailOps >= 0.9.6 and a jail with FreeBSD-fetch and pkg:  jailops jail base add NAME FreeBSD-fetch
+#   jailops jail apply NAME -f recipes/custom-package-repository/ --vars my.vars
+# One repository per apply: it owns /usr/local/etc/pkg/repos/${repo_name}.conf and /usr/local/etc/pkg/keys/${repo_name}.pub and nothing else;
+# apply again with another repo_name for the next repository. FreeBSD, FreeBSD-base, FreeBSD-ports and FreeBSD-ports-kmods are taken by the image.
+# Packages are not part of it (a step cannot be left out and a package step needs a name): install them with  jailops pkg install NAME -- PACKAGE.
+# repo_url may hold pkg's own ${ABI}: write it as it is, a value is never searched for variables again (so no $${ABI}).
+vars:
+  repo_name:  {required: true}        # a lower-case word; it names the repository, NAME.conf and NAME.pub
+  repo_url:   {required: true}        # the repository, as pkg wants it: pkg+https://pkg.example.org/${ABI}/latest
+  key_url:    {required: true}        # https URL of the public key (PEM)
+  key_sha256: {default: ""}           # when set, a key with another sha256 is refused before it is installed, and a key that differs is replaced
+requirements:
+  - check: [sh, -c, 'case $1 in [a-z]*) case $1 in *[!a-z0-9-]*) exit 1;; esac;; *) exit 1;; esac', sh, "${repo_name}"]
+    message: "repo_name ${repo_name} must be a lower-case word (a to z, digits and - after the first letter): it names the files NAME.conf and NAME.pub"
+  - check: [sh, -c, 'case $1 in https://?*) exit 0;; esac; exit 1', sh, "${key_url}"]
+    message: "key_url must be an https:// URL"
+  - check: [sh, -c, 'case $1 in "") exit 0;; esac; case $1 in *[!0-9a-f]*) exit 1;; esac; test $${#1} -eq 64', sh, "${key_sha256}"]
+    message: "key_sha256 must be 64 lower-case hex digits (sha256 -q FILE), or empty"
+  - check: [test, -x, /usr/bin/fetch]
+    message: "fetch is not in this jail: run  jailops jail base add NAME FreeBSD-fetch  on the host, then apply again"
+  - check: [test, -x, /usr/local/sbin/pkg]
+    message: "pkg is not in this jail: run  jailops pkg install NAME -- pkg  on the host, then apply again"
+  - check: [test, -x, /sbin/sha256]
+    message: "sha256 is not in this jail (it ships with the runtime): check the base of the jail, then apply again"
+steps:
+  - dir: {path: /usr/local/etc/pkg/keys, mode: "0755"}
+  - dir: {path: /usr/local/etc/pkg/repos, mode: "0755"}
+
+  # The key: fetched next to its place, checked, then moved over. Skipped while the installed key is there and, when key_sha256
+  # is given, has that sha256: a changed key_sha256 (a rotation) replaces the file, no key_sha256 never replaces an installed key
+  # (remove the file to fetch it again). A key that fails the check is not installed and the old one stays.
+  - run:
+      - sh
+      - -c
+      - |
+        set -eu
+        url=$1; dest=$2; want=$3
+        tmp="$dest.new"
+        trap 'rm -f "$tmp"' EXIT
+        case $url in https://*) ;; *) echo "custom-package-repository: key_url must be https" >&2; exit 1;; esac
+        fetch -q -T 30 -o "$tmp" "$url" || { echo "custom-package-repository: cannot fetch the key from $url" >&2; exit 1; }
+        test -s "$tmp" || { echo "custom-package-repository: the key from $url is empty" >&2; exit 1; }
+        if [ -n "$want" ]; then
+          got=$(sha256 -q "$tmp")
+          [ "$got" = "$want" ] || { echo "custom-package-repository: the key from $url has sha256 $got, not the key_sha256 you gave: nothing was installed" >&2; exit 1; }
+        fi
+        grep -q 'BEGIN PUBLIC KEY' "$tmp" || { echo "custom-package-repository: the file from $url is not a PEM public key: nothing was installed" >&2; exit 1; }
+        chmod 0644 "$tmp"
+        mv -f "$tmp" "$dest"
+      - sh
+      - "${key_url}"
+      - /usr/local/etc/pkg/keys/${repo_name}.pub
+      - "${key_sha256}"
+    unless:
+      - sh
+      - -c
+      - 'test -f "$1" && { test -z "$2" || test "$(sha256 -q "$1")" = "$2"; }'
+      - sh
+      - /usr/local/etc/pkg/keys/${repo_name}.pub
+      - "${key_sha256}"
+
+  - file:
+      path: /usr/local/etc/pkg/repos/${repo_name}.conf
+      source: files/repo.conf
+      template: true
+      mode: "0644"
+
+  # a check: refreshes the catalogue of this repository and verifies its signature with the key. No guard: it runs at every apply ("executed")
+  - run: [pkg, update, -r, "${repo_name}"]
