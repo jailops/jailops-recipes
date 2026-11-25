@@ -8,6 +8,13 @@
       "files": ["config.example", "recipe.yaml"]
     },
     {
+      "name": "custom-package-repository",
+      "title": "Custom package repository",
+      "summary": "Make a jail use an additional pkg repository, with its public key fetched from an https URL and optionally pinned by its sha256.",
+      "category": "System Administration",
+      "files": ["config.example", "files/repo.conf", "recipe.yaml"]
+    },
+    {
       "name": "local-caching-resolver",
       "title": "Local caching resolver",
       "summary": "A DNS resolver for one client network, in its own jail: it caches, validates DNSSEC and answers only the clients you name.",
