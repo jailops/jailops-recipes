@@ -1,5 +1,5 @@
 # ssh-key-only-access: sshd accepts public-key logins of the named users and nothing else.
-# Needs JailOps >= 0.9.5 and a jail with FreeBSD-ssh:  jailops jail base add NAME FreeBSD-ssh
+# Needs JailOps >= 0.9.6 and a jail with FreeBSD-ssh:  jailops jail base add NAME FreeBSD-ssh
 #   jailops jail apply NAME -f recipes/ssh-key-only-access/ --vars my.vars
 # It owns /etc/ssh/sshd_config as a whole (the previous file is kept once next to it). The keys are read from
 # ${keys_dir}/USER, the file that admin-user-with-ssh-key writes.
@@ -8,6 +8,9 @@ vars:
   permit_root_login: {default: "no"}                    # "no", or "prohibit-password" with root in allowed_users
   port:             {default: 22}
   keys_dir:         {default: /usr/local/etc/ssh/authorized_keys}
+requirements:
+  - check: [test, -x, /usr/sbin/sshd]
+    message: "sshd is not in this jail: run  jailops jail base add NAME FreeBSD-ssh  on the host, then apply again"
 steps:
   # no lock-out: every named user must already have a valid public key in the key directory, or nothing is changed.
   # The recipe never writes a key file itself, so a key cannot be replaced from here.

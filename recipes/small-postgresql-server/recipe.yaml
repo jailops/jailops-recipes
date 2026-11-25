@@ -1,6 +1,6 @@
 # small-postgresql-server: a PostgreSQL server whose data lives in a volume at /var/db/postgres. Nothing else: databases and
 # roles come from postgresql-database-and-role, backups from postgresql-nightly-backup.
-# Needs JailOps >= 0.9.5. First the infrastructure (infra.yaml: a volume and a jail, for a new jail only), then:
+# Needs JailOps >= 0.9.6. First the infrastructure (infra.yaml: a volume and a jail, for a new jail only), then:
 #   jailops jail apply db -f recipes/small-postgresql-server/ --vars my.vars
 # It never replaces a file the server owns: postgresql.conf and pg_hba.conf each get one `include_dir` line, once, and the
 # recipe writes only its own files in conf.d. A server that is already running here keeps its rules and its settings.
@@ -9,6 +9,11 @@ vars:
   listen_addresses: {default: "*"}        # who can reach the port is the firewall policy's decision
   max_connections:  {default: 100}
   shared_buffers:   {default: 128MB}
+requirements:
+  # PostgreSQL needs System V shared memory; in a jail without it initdb fails with "Function not implemented". ipcrm asks the
+  # kernel for a key that does not exist: "No such file" means the jail has it, "not implemented" means it does not
+  - check: [sh, -c, '! ipcrm -M 7654321 2>&1 | grep -q "not implemented"']
+    message: "System V shared memory is off in this jail: run  jailops config set NAME sysvipc=true  on the host, restart the jail, and apply again"
 steps:
   # a server of another major version must not be replaced by pkg: refuse, with the reason
   - run:

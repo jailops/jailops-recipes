@@ -6,7 +6,7 @@ anything it checks that every named user already has a valid public key, so clos
 Title: SSH key-only access
 Summary: sshd accepts key logins for the users you name and nothing else, after checking that every one of them has a key.
 Category: Security & Hardening
-Requires JailOps >= 0.9.5.
+Requires JailOps >= 0.9.6.
 
 ## When to use
 
@@ -18,7 +18,7 @@ the file again, so keep your own settings in the variables of the recipe or in a
 
 ## Assumes
 
-- `jailops jail base add web FreeBSD-ssh` was done: that is where sshd and `ssh-keygen` come from.
+- `jailops jail base add web FreeBSD-ssh` was done: that is where sshd and `ssh-keygen` come from. The recipe checks that sshd is there before it changes anything.
 - Every user in `allowed_users` has a key file in `keys_dir` (`/usr/local/etc/ssh/authorized_keys/USER`), made by `admin-user-with-ssh-key`. The recipe checks it and stops
   with the name of the user that has none; nothing is changed in that case.
 - Keys in a user's own `~/.ssh/authorized_keys` are **not** read any more: `AuthorizedKeysFile` points to `keys_dir` only. Move them there first.
