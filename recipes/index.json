@@ -1,0 +1,88 @@
+{
+  "recipes": [
+    {
+      "name": "admin-user-with-ssh-key",
+      "title": "Admin user with SSH key",
+      "summary": "A user account with no password, and the public keys that may log in as that user.",
+      "category": "Users & Access",
+      "files": ["config.example", "recipe.yaml"]
+    },
+    {
+      "name": "local-caching-resolver",
+      "title": "Local caching resolver",
+      "summary": "A DNS resolver for one client network, in its own jail: it caches, validates DNSSEC and answers only the clients you name.",
+      "category": "DNS & Networking",
+      "files": ["config.example", "files/unbound.conf", "infra.yaml", "recipe.yaml"]
+    },
+    {
+      "name": "local-dns-zone",
+      "title": "Local DNS zone",
+      "summary": "Names the resolver answers itself, for one zone: your own hosts, an internal domain, a name that points somewhere else inside.",
+      "category": "DNS & Networking",
+      "files": ["config.example", "files/zone.conf", "recipe.yaml"]
+    },
+    {
+      "name": "nginx-tls-site",
+      "title": "Nginx TLS site",
+      "summary": "One https site on nginx with its certificate and key, and http redirecting to https; apply again with another name for the next site.",
+      "category": "Web & Reverse Proxy",
+      "files": ["config.example", "files/site.conf", "recipe.yaml"]
+    },
+    {
+      "name": "nginx-web-server",
+      "title": "Nginx web server",
+      "summary": "nginx installed and running, with a main configuration that includes conf.d/*.conf and answers nothing for a name no site claims.",
+      "category": "Web & Reverse Proxy",
+      "files": ["config.example", "files/nginx.conf", "recipe.yaml"]
+    },
+    {
+      "name": "postgresql-database-and-role",
+      "title": "PostgreSQL database and role",
+      "summary": "One database, the role that owns it, and the rule that lets that role connect from one network; apply again for the next database.",
+      "category": "Databases",
+      "files": ["config.example", "files/role.sql", "recipe.yaml"]
+    },
+    {
+      "name": "postgresql-nightly-backup",
+      "title": "PostgreSQL nightly backup",
+      "summary": "A nightly logical backup of every database and role of a PostgreSQL server, with retention; a failed night is never silent.",
+      "category": "Backup & Recovery",
+      "files": ["config.example", "files/pg-backup.conf", "files/pg-backup.cron", "files/pg-backup.sh", "recipe.yaml"]
+    },
+    {
+      "name": "postgresql-restore-dump",
+      "title": "Restore a PostgreSQL dump",
+      "summary": "Restores one dump of the nightly backup into a new database, owned by the role you name.",
+      "category": "Backup & Recovery",
+      "files": ["config.example", "files/pg-restore-dump.sh", "recipe.yaml"]
+    },
+    {
+      "name": "quiet-periodic-and-cron",
+      "title": "Quiet periodic and cron",
+      "summary": "Periodic jobs that log instead of mailing, and cron jobs spread over a few seconds so that many jails do not wake together.",
+      "category": "System Administration",
+      "files": ["config.example", "recipe.yaml"]
+    },
+    {
+      "name": "small-postgresql-server",
+      "title": "Small PostgreSQL server",
+      "summary": "A PostgreSQL server in a jail with its data in a volume, asking for a password on every network connection.",
+      "category": "Databases",
+      "files": ["config.example", "files/10-recipe.conf", "infra.yaml", "recipe.yaml"]
+    },
+    {
+      "name": "ssh-key-only-access",
+      "title": "SSH key-only access",
+      "summary": "sshd accepts key logins for the users you name and nothing else, after checking that every one of them has a key.",
+      "category": "Security & Hardening",
+      "files": ["config.example", "files/sshd_config", "recipe.yaml"]
+    },
+    {
+      "name": "syslog-forwarding",
+      "title": "Syslog forwarding",
+      "summary": "The jail sends its log messages to a central log host over UDP, so they are kept somewhere other than the jail.",
+      "category": "Monitoring & Logging",
+      "files": ["config.example", "recipe.yaml"]
+    }
+  ]
+}

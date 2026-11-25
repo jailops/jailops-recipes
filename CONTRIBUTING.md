@@ -37,4 +37,4 @@ Rules of the steps:
 ## Check
 
 `sh check.sh` checks every entry offline, with `jailops jail apply --validate` and no daemon, jail or network (the client must be 0.9.5 or later: `JAILOPS=/path/to/jailops sh check.sh`). It checks the files, the README, the variables against
-`config.example`, that there is no key or password-looking value, and that every action of the workflow is pinned to a commit SHA. It runs on every push and pull request (`.github/workflows/check.yml`).
+`config.example`, that there is no key or password-looking value, that every action of the workflow is pinned to a commit SHA, and that `recipes/index.json` is up to date. That file is what the website reads to list the recipes; after you add or change an entry, run `sh check.sh --write-index` and commit the result. It runs on every push and pull request (`.github/workflows/check.yml`).

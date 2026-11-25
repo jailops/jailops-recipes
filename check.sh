@@ -12,15 +12,39 @@
 #   - config.example gives every variable of recipe.yaml, except the secret ones, which must not be in it
 #   - `jailops jail apply --validate -f ENTRY --vars ENTRY/config.example`, with a placeholder for every secret variable
 #   - no private key, no password-looking value, no address outside the documentation and private ranges
-# and for the repository: every action of .github/workflows is pinned to a commit SHA.
+# and for the repository: every action of .github/workflows is pinned to a commit SHA, and recipes/index.json (the one file the website
+# reads to list the recipes: name, title, summary, category and the files of each entry) is up to date.
+#
+#   sh check.sh --write-index    writes recipes/index.json from the READMEs and the files of the entries (run it when you add or change an entry)
 #
 #   JAILOPS   the jailops client, 0.9.5 or later (default: `jailops` in PATH)
 # Exit status: 0 when everything is valid, 1 when something is not, 2 when it cannot run (no client).
 set -u
 cd "$(dirname "$0")"
 JAILOPS=${JAILOPS:-jailops}
+
+# recipes/index.json: what the website needs to list the recipes without fetching every README
+json_escape() { sed 's/\\/\\\\/g; s/"/\\"/g'; }
+make_index() {
+	local first=1 name d
+	printf '{\n  "recipes": [\n'
+	for name in $(cd recipes && for x in */; do printf '%s\n' "${x%/}"; done | sort); do
+		d=recipes/$name
+		[ -f "$d/README.md" ] || continue
+		[ $first -eq 1 ] || printf ',\n'
+		first=0
+		printf '    {\n      "name": "%s",\n' "$name"
+		printf '      "title": "%s",\n' "$(sed -n 's/^Title: *//p' "$d/README.md" | head -n 1 | json_escape)"
+		printf '      "summary": "%s",\n' "$(sed -n 's/^Summary: *//p' "$d/README.md" | head -n 1 | json_escape)"
+		printf '      "category": "%s",\n' "$(sed -n 's/^Category: *//p' "$d/README.md" | head -n 1 | json_escape)"
+		printf '      "files": [%s]\n    }' "$(cd "$d" && find . -type f ! -name README.md | sed 's|^\./||' | LC_ALL=C sort | json_escape | sed 's/.*/"&"/' | paste -sd, - | sed 's/,/, /g')"
+	done
+	printf '\n  ]\n}\n'
+}
+if [ "${1:-}" = --write-index ]; then make_index > recipes/index.json && echo "wrote recipes/index.json ($(grep -c '"name"' recipes/index.json) recipes)"; exit 0; fi
 command -v "$JAILOPS" >/dev/null 2>&1 || [ -x "$JAILOPS" ] || { echo "check: no jailops client (set JAILOPS)" >&2; exit 2; }
-if [ $# -gt 0 ]; then entries=$*; else entries=$(ls recipes); fi
+
+if [ $# -gt 0 ]; then entries=$*; else entries=$(cd recipes && for x in */; do printf '%s\n' "${x%/}"; done); fi
 
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
@@ -118,6 +142,16 @@ if [ $# -eq 0 ] && [ -d .github/workflows ]; then
 		grep -q '^permissions: {}' "$f" || bad "$f: the top-level permissions must be {}"
 	done
 	[ "$efail" -ne 0 ] || echo "ok   workflows"
+fi
+
+# the index the website reads
+if [ $# -eq 0 ]; then
+	entry=recipes/index.json
+	efail=0
+	if [ ! -f recipes/index.json ] || ! make_index | cmp -s - recipes/index.json; then
+		bad "recipes/index.json is missing or out of date: run  sh check.sh --write-index  and commit it"
+	fi
+	[ "$efail" -ne 0 ] || echo "ok   index.json"
 fi
 
 exit $fail
