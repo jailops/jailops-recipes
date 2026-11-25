@@ -1,8 +1,8 @@
 name: Check
 
 # Every push and pull request: sh check.sh validates every recipe offline (no FreeBSD host, no daemon, no jail).
-# The check needs the jailops client of a release that has `jailops jail apply --validate` (0.9.5 or later): it is built here from the
-# tagged source of github.com/jailops/jailops. Change JAILOPS_REF when a newer release changes what the Book needs.
+# The check needs the jailops client (`jailops jail apply --validate`): it is built here from the master source of
+# github.com/jailops/jailops, so it always knows what the recipes use.
 
 on:
   push:
@@ -13,7 +13,7 @@ on:
 permissions: {}
 
 env:
-  JAILOPS_REF: v0.9.5
+  JAILOPS_REF: master
   GOTOOLCHAIN: auto
 
 jobs:
