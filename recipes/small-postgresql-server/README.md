@@ -6,7 +6,7 @@ A PostgreSQL server in a jail, with its data in a volume, that asks for a passwo
 Title: Small PostgreSQL server
 Summary: A PostgreSQL server in a jail with its data in a volume, asking for a password on every network connection.
 Category: Databases
-Requires JailOps >= 0.9.5.
+Requires JailOps >= 0.9.6.
 
 ## When to use
 
@@ -14,6 +14,7 @@ Requires JailOps >= 0.9.5.
 
 ## Assumes
 
+- System V shared memory in the jail (`sysvipc`: `jailops config set db sysvipc=true`, then restart the jail). The infrastructure file sets it. The recipe checks this first and stops before any change when it is off.
 - PostgreSQL 16 or later (`pg_version`, default 17). The recipe refuses anything lower, because it relies on `pg_hba.d`.
 - The data directory `/var/db/postgres` is a volume: it must be attached before the apply (see infrastructure). Without a volume the data lives in the jail's own root, which the recipe also accepts.
 - On a jail that already has a cluster of **another major version** the recipe stops before it installs anything: pkg would replace the installed server with the new major version.
